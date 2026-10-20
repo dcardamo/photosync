@@ -36,6 +36,7 @@
   let apiKey = ''
   let statusToken = ''
   let unlisten: (() => void) | null = null
+  let refreshing = false
 
   $: configured = settingsView?.configured ?? false
   $: years = [...new Set((projectsView?.projects ?? [])
@@ -97,15 +98,21 @@
   }
 
   async function refresh() {
-    const [p, c, s, h] = await Promise.allSettled([
-      api.projects(), api.capacity(), api.status(), api.releaseHistory(),
-    ])
-    if (p.status === 'fulfilled') projectsView = p.value
-    if (c.status === 'fulfilled') capacityView = c.value
-    if (s.status === 'fulfilled') statusView = s.value
-    if (h.status === 'fulfilled') history = h.value
-    const failure = [p, c, s, h].find((r) => r.status === 'rejected')
-    if (failure && failure.status === 'rejected') error = message(failure.reason)
+    if (refreshing) return
+    refreshing = true
+    try {
+      const [p, c, s, h] = await Promise.allSettled([
+        api.projects(), api.capacity(), api.status(), api.releaseHistory(),
+      ])
+      if (p.status === 'fulfilled') projectsView = p.value
+      if (c.status === 'fulfilled') capacityView = c.value
+      if (s.status === 'fulfilled') statusView = s.value
+      if (h.status === 'fulfilled') history = h.value
+      const failure = [p, c, s, h].find((r) => r.status === 'rejected')
+      if (failure && failure.status === 'rejected') error = message(failure.reason)
+    } finally {
+      refreshing = false
+    }
   }
 
   async function saveSettings() {
