@@ -631,6 +631,20 @@ async fn projects(
                 project.active = profile.active.contains(&project.path);
                 project.stale = true;
             }
+            for active in &profile.active {
+                if projects.iter().any(|project| &project.path == active) {
+                    continue;
+                }
+                if let Ok(project) = Project::from_originals_in(active, &settings.layout) {
+                    projects.push(project_view(&project, 0, 0, 0, 0, true, true));
+                }
+            }
+            projects.sort_by(|a, b| {
+                b.year
+                    .unwrap_or(0)
+                    .cmp(&a.year.unwrap_or(0))
+                    .then_with(|| a.name.cmp(&b.name))
+            });
             Ok(ProjectsView {
                 projects,
                 stale: true,
