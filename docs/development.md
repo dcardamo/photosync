@@ -55,6 +55,11 @@ adb reverse tcp:8787 tcp:8787
 That keeps Syncthing and the status server on `127.0.0.1` inside the emulator,
 which is the only cleartext destination the app allows.
 
+`scripts/android-e2e.sh` does this automatically. It drives the real setup,
+activate and release UI through the WebView, against a real status server and a
+small device-side Syncthing REST double. The real Syncthing facts stay in
+`scripts/live-tests.sh`.
+
 ## Layout
 
 - `crates/core` — Syncthing REST client, profile rendering, project model,

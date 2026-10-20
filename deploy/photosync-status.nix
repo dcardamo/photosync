@@ -7,7 +7,7 @@
     tokenFile = "/run/secrets/photosync-status-token";
     openFirewall = false;
     settings = {
-      bind = "100.64.0.10:8787";
+      bind = "203.0.113.10:8787";
       root = "/srv/photos";
       ignore_file = ".stignore";
       backup_marker = "/var/lib/photosync/last-backup";

@@ -23,8 +23,7 @@ in project names.
 
 Android only. Sideload the signed arm64 APK and update it with
 [Obtainium](https://github.com/ImranR98/Obtainium) from
-`https://github.com/dcardamo/photosync` (replace with the repository URL you
-actually publish from). Every `v*` release carries
+`https://github.com/dcardamo/photosync`. Every `v*` release carries
 `photosync-<version>-arm64.apk` and notes.
 
 You need Syncthing-Fork on the device and an existing shared folder. The hub is
@@ -56,7 +55,7 @@ services.photosync-status = {
   enable = true;
   tokenFile = "/run/secrets/photosync-status-token";
   settings = {
-    bind = "100.64.0.10:8787";
+    bind = "203.0.113.10:8787";
     root = "/srv/photos";
     ignore_file = ".stignore";
     backup_marker = "/var/lib/photosync/last-backup";
