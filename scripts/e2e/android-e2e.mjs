@@ -13,6 +13,8 @@ const adb = (...args) => execFileSync('adb', ['-s', serial, ...args], { encoding
 const root = new URL('../../', import.meta.url).pathname;
 const deviceRoot = '/sdcard/Download/photosync-e2e';
 const token = process.env.STATUS_TOKEN ?? 'e2e-status-token-0123456789';
+const syncthingHost = process.env.E2E_SYNCTHING_HOST ?? 'http://127.0.0.1:18384';
+const statusHost = process.env.E2E_STATUS_HOST ?? 'http://127.0.0.1:18787';
 
 const pid = adb('shell', 'pidof', appId);
 assert.ok(pid, 'the app is running');
@@ -77,7 +79,7 @@ try {
   // The double reports the profile lines the app is about to activate. It does
   // not need to read the device; the release step only checks that the lines
   // disappear after the profile rewrite.
-  await fetch('http://127.0.0.1:8384/test/state', {
+  await fetch(`${syncthingHost}/test/state`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
@@ -88,7 +90,7 @@ try {
   await card.getByRole('button', { name: 'Activate' }).click();
   await page.locator('.project', { hasText: 'Demo' }).locator('.badge', { hasText: 'active' }).waitFor({ timeout: 20_000 });
 
-  await fetch('http://127.0.0.1:8384/test/state', {
+  await fetch(`${syncthingHost}/test/state`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ active: [], release: true }),
@@ -106,7 +108,7 @@ try {
   const publishedCheck = execFileSync('adb', ['-s', serial, 'shell', `test -e '${deviceRoot}/published/Projects/Demo/a.jpg' && echo yes || echo no`], { encoding: 'utf8' }).trim();
   assert.equal(publishedCheck, 'no', 'release deleted the local published twin');
 
-  const response = await fetch('http://127.0.0.1:8787/v1/tree?prefix=originals/Projects/Demo', {
+  const response = await fetch(`${statusHost}/v1/tree?prefix=originals/Projects/Demo`, {
     headers: { authorization: `Bearer ${token}` },
   });
   assert.equal(response.status, 200, 'hub status server stayed reachable');

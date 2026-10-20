@@ -18,8 +18,8 @@ fi
 adb -s "$serial" install -r app/src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk >/dev/null
 adb -s "$serial" shell pm clear "$app" >/dev/null 2>&1 || true
 adb -s "$serial" shell appops set "$app" MANAGE_EXTERNAL_STORAGE allow >/dev/null 2>&1 || true
-adb -s "$serial" reverse tcp:8384 tcp:8384 >/dev/null
-adb -s "$serial" reverse tcp:8787 tcp:8787 >/dev/null
+adb -s "$serial" reverse tcp:8384 tcp:18384 >/dev/null
+adb -s "$serial" reverse tcp:8787 tcp:18787 >/dev/null
 
 rm -rf "$work"
 mkdir -p "$root/originals/Projects/Demo" "$root/published/Projects/Demo" "$work"
@@ -31,7 +31,7 @@ printf '%s' "$token" > "$work/status.token"
 chmod 600 "$work/status.token"
 touch -d @1600000000 "$root/originals/Projects/Demo/a.jpg" "$root/published/Projects/Demo/a.jpg"
 cat > "$work/status.toml" <<EOF
-bind = "127.0.0.1:8787"
+bind = "127.0.0.1:18787"
 root = "$root"
 ignore_file = ".stignore"
 backup_marker = "$work/last-backup"
@@ -46,14 +46,14 @@ adb -s "$serial" push "$root/published/Projects/Demo/a.jpg" "$device_root/publis
 adb -s "$serial" shell touch -d @1600000000 "$device_root/originals/Projects/Demo/a.jpg" "$device_root/published/Projects/Demo/a.jpg" >/dev/null
 
 cargo build -p photosync-status >/dev/null
-node scripts/e2e/fake-syncthing.mjs > "$work/fake-syncthing.log" 2>&1 &
+PORT=18384 node scripts/e2e/fake-syncthing.mjs > "$work/fake-syncthing.log" 2>&1 &
 fake=$!
 target/debug/photosync-status --config "$work/status.toml" --token-file "$work/status.token" > "$work/status.log" 2>&1 &
 status=$!
 trap 'kill "$fake" "$status" 2>/dev/null || true; adb -s "$serial" reverse --remove tcp:8384 >/dev/null 2>&1 || true; adb -s "$serial" reverse --remove tcp:8787 >/dev/null 2>&1 || true' EXIT
 for _ in $(seq 100); do
-  if curl -fsS -H "Authorization: Bearer $token" http://127.0.0.1:8787/v1/base-ignores >/dev/null 2>&1 &&
-     curl -fsS http://127.0.0.1:8384/test/health >/dev/null 2>&1; then break; fi
+  if curl -fsS -H "Authorization: Bearer $token" http://127.0.0.1:18787/v1/base-ignores >/dev/null 2>&1 &&
+     curl -fsS http://127.0.0.1:18384/test/health >/dev/null 2>&1; then break; fi
   sleep 0.1
 done
 adb -s "$serial" shell am start -n "$app/app.photosync.MainActivity" >/dev/null
