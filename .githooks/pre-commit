@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Blocks commits that add secrets or local files (scripts/check-secrets.sh).
+# Enabled by `git config core.hooksPath .githooks`, which the dev shell sets.
+exec "$(git rev-parse --show-toplevel)/scripts/check-secrets.sh" --staged

@@ -1,0 +1,26 @@
+[package]
+name = "photosync-app"
+description = "photosync Android app"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[lib]
+name = "photosync_app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.6.3", features = [] }
+
+[dependencies]
+photosync-core = { path = "../../crates/core" }
+chrono.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+log = "0.4"
+tauri = { version = "2.11.3", features = [] }
+
+[target.'cfg(all(unix, not(target_os = "android")))'.dependencies]
+libc = "0.2"

@@ -1,0 +1,13 @@
+# Copy to a host-private path. Every value is a runtime setting.
+bind = "127.0.0.1:8787"
+root = "/srv/photos"
+ignore_file = ".stignore"
+# Write this file from the backup job only after a successful restic run.
+backup_marker = "/var/lib/photosync/last-backup"
+sizes_cache_seconds = 60
+max_entries = 100000
+
+# For a direct HTTPS bind on the tailnet IP, create a Tailscale certificate:
+#   tailscale cert hub.example.ts.net
+# tls_cert = "/var/lib/photosync/hub.example.ts.net.crt"
+# tls_key = "/var/lib/photosync/hub.example.ts.net.key"

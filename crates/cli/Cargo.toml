@@ -1,0 +1,19 @@
+[package]
+name = "photosync-cli"
+description = "Developer CLI for photosync: list, activate, release dry-run"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "photosync"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0.100"
+chrono.workspace = true
+clap = { version = "4.5.51", features = ["derive", "env"] }
+photosync-core = { path = "../core" }
+serde_json.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }

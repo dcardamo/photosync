@@ -1,0 +1,25 @@
+# Example. Run with:
+#   PHOTOSYNC_ROOT=/srv/photos \
+#   PHOTOSYNC_BACKUP_MARKER=/var/lib/photosync/last-backup \
+#   PHOTOSYNC_TOKEN_FILE=../.data/status.token \
+#   docker compose -f deploy/docker-compose.yml up --build
+services:
+  status:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    command:
+      - --config
+      - /etc/photosync/status.toml
+      - --token-file
+      - /run/secrets/token
+    volumes:
+      - ./status.example.toml:/etc/photosync/status.toml:ro
+      - ${PHOTOSYNC_ROOT:-/srv/photos}:/srv/photos:ro
+      - ${PHOTOSYNC_BACKUP_MARKER:-/var/lib/photosync/last-backup}:/var/lib/photosync/last-backup:ro
+      - ${PHOTOSYNC_TOKEN_FILE:-../.data/status.token}:/run/secrets/token:ro
+    ports:
+      - "127.0.0.1:8787:8787"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true

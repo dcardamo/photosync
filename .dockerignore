@@ -1,0 +1,9 @@
+target
+.git
+.data
+node_modules
+app/node_modules
+app/dist
+app/src-tauri/target
+app/src-tauri/gen/android/build
+app/src-tauri/gen/android/app/build

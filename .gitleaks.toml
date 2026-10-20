@@ -1,0 +1,39 @@
+# Secret scanning rules for scripts/check-secrets.sh. gitleaks' defaults plus
+# Syncthing API keys and bearer tokens in config-like files.
+title = "photosync secret scan"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "syncthing-api-key"
+description = "Syncthing API key"
+regex = '''(?i)(?:api[_-]?key|x-api-key)\s*["']?\s*[:=]\s*["']?([A-Za-z0-9_-]{20,})'''
+secretGroup = 1
+entropy = 3.2
+keywords = ["api", "key"]
+
+[[rules]]
+id = "photosync-status-token"
+description = "photosync status bearer token"
+regex = '''(?i)(?:status[_-]?token|bearer)\s*["']?\s*[:=]\s*["']([A-Za-z0-9._~+/-]{24,})["']'''
+secretGroup = 1
+entropy = 3.5
+keywords = ["token", "bearer"]
+
+[rules.allowlist]
+regexes = [
+  '''e2e-status-token-0123456789''',
+  '''synthetic-docker-smoke-token-0123456789''',
+  '''photosync-live-status-token-0123456789''',
+  '''test-token-with-enough-bytes''',
+]
+
+[[allowlists]]
+description = "Synthetic tokens used only by tests and local smoke scripts"
+regexes = [
+  '''e2e-status-token-0123456789''',
+  '''synthetic-docker-smoke-token-0123456789''',
+  '''photosync-live-status-token-0123456789''',
+  '''test-token-with-enough-bytes''',
+]

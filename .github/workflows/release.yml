@@ -1,0 +1,139 @@
+# Builds, signs and publishes the arm64 APK for Obtainium.
+# Releases come from v* tags (scripts/release.sh creates one). A manual run on
+# main builds and signs the same way but keeps the APK as an artifact.
+#
+# Build code (npm, cargo, Gradle) never sees a secret. Only the sign job reads
+# the signing key, from the "release" environment.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+concurrency:
+  group: android-release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    env:
+      RUST_VERSION: stable
+      NDK_VERSION: 27.2.12479018
+      TAURI_CLI_VERSION: 2.11.4
+      TAURI_CLI_SHA256: 6864602a34292aa6f2ad40ae019eebe5c1064d6c623fe20696a8a8974067e60b
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Allocate the app version
+        id: version
+        run: |
+          if [[ $GITHUB_REF == refs/tags/v* ]]; then
+            version=${GITHUB_REF_NAME#v}
+          else
+            version=$(scripts/next-release-version.sh)
+          fi
+          jq --arg v "$version" '.version = $v' app/src-tauri/tauri.conf.json >"$RUNNER_TEMP/tauri.conf.json"
+          mv "$RUNNER_TEMP/tauri.conf.json" app/src-tauri/tauri.conf.json
+          echo "version=$version" >>"$GITHUB_OUTPUT"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - name: Install Rust, the NDK and the Tauri CLI
+        run: |
+          rustup toolchain install "$RUST_VERSION" --profile minimal --target aarch64-linux-android
+          rustup default "$RUST_VERSION"
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK_VERSION" >/dev/null
+          echo "NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >>"$GITHUB_ENV"
+          echo "JAVA_HOME=$JAVA_HOME_17_X64" >>"$GITHUB_ENV"
+          cd "$RUNNER_TEMP"
+          curl -sSfL -o cargo-tauri.tgz \
+            "https://github.com/tauri-apps/tauri/releases/download/tauri-cli-v${TAURI_CLI_VERSION}/cargo-tauri-x86_64-unknown-linux-gnu.tgz"
+          echo "${TAURI_CLI_SHA256}  cargo-tauri.tgz" | sha256sum -c -
+          tar -xzf cargo-tauri.tgz -C "$HOME/.cargo/bin" cargo-tauri
+      - name: Build the unsigned arm64 APK
+        working-directory: app
+        run: |
+          npm ci --no-audit --no-fund
+          cargo tauri android build --apk --split-per-abi --target aarch64
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: unsigned-apk
+          path: app/src-tauri/gen/android/app/build/outputs/apk/arm64/release/app-arm64-release-unsigned.apk
+          if-no-files-found: error
+          retention-days: 3
+
+  sign:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write
+    env:
+      # Installed copies only accept updates signed with this certificate.
+      RELEASE_CERT_SHA256: 4591CFDABD68DE29C741F745115238DF4035AFA16A7C99CDE53E12C64466291A
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: unsigned-apk
+          path: ${{ runner.temp }}/unsigned
+      - name: Sign and verify
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          tools=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)
+          version='${{ needs.build.outputs.version }}'
+          apk="$RUNNER_TEMP/photosync-$version-arm64.apk"
+          keystore="$RUNNER_TEMP/release.keystore"
+          base64 -d <<<"$KEYSTORE_BASE64" >"$keystore"
+          "$tools/zipalign" -f -p 4 "$RUNNER_TEMP/unsigned/app-arm64-release-unsigned.apk" "$RUNNER_TEMP/aligned.apk"
+          "$tools/apksigner" sign --ks "$keystore" --ks-key-alias photosync \
+            --ks-pass env:KEYSTORE_PASSWORD --key-pass env:KEYSTORE_PASSWORD \
+            --out "$apk" "$RUNNER_TEMP/aligned.apk"
+          rm -f "$keystore"
+          certs=$("$tools/apksigner" verify --print-certs "$apk" |
+            grep -oE 'certificate SHA-256 digest: [0-9a-f]+' | awk '{print $4}' | tr 'a-f' 'A-F' | sort -u)
+          echo "Signing certificate: $certs"
+          if [ "$certs" != "$RELEASE_CERT_SHA256" ]; then
+            echo "::error::APK is not signed with the release key"
+            exit 1
+          fi
+          badging=$("$tools/aapt2" dump badging "$apk")
+          if [[ $badging != *"package: name='app.photosync'"*"versionName='$version'"* ]]; then
+            echo "::error::APK is not app.photosync $version"
+            exit 1
+          fi
+          echo "APK=$apk" >>"$GITHUB_ENV"
+          echo "VERSION=$version" >>"$GITHUB_ENV"
+      - name: Publish the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          previous=$(git tag --list 'v*' --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)
+          if [ -n "$previous" ] && [ "$previous" != "v$VERSION" ]; then
+            notes=$(git log --no-merges --format='- %s' "$previous..$GITHUB_SHA")
+          else
+            notes="First release."
+          fi
+          gh release create "v$VERSION" "$APK" --target "$GITHUB_SHA" --latest \
+            --title "photosync $VERSION" --notes "${notes:-Maintenance release.}"
+      - name: Keep the dry-run APK
+        if: github.event_name != 'push'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: signed-apk-dry-run
+          path: ${{ env.APK }}
+          retention-days: 3

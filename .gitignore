@@ -1,0 +1,18 @@
+/target/
+node_modules/
+/app/dist/
+/app/src-tauri/target/
+/app/src-tauri/gen/schemas/
+/.android-avd/
+/.android-user/
+/app/.android-user/
+# Local settings, release journals, signing keys and test homes.
+/.data/
+*.sqlite
+*.sqlite-*
+*.keystore
+# Private research notes; the repo is public.
+/.research/
+
+# Nix build output symlink
+/result

@@ -1,0 +1,38 @@
+[package]
+name = "photosync-status"
+description = "Read-only status server for the photosync release gate"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "photosync-status"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0.100"
+axum = "0.8.6"
+axum-server = { version = "0.7.2", features = ["tls-rustls"] }
+chrono.workspace = true
+clap = { version = "4.5.51", features = ["derive"] }
+globset.workspace = true
+photosync-core = { path = "../core" }
+serde.workspace = true
+serde_json.workspace = true
+subtle = "2.6.1"
+thiserror.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "signal", "net"] }
+toml = "0.9.8"
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
+walkdir.workspace = true
+
+[dev-dependencies]
+async-trait.workspace = true
+chrono.workspace = true
+reqwest.workspace = true
+serde_json.workspace = true
+tempfile = "3.23.0"
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time"] }
+tower = { version = "0.5.2", features = ["util"] }

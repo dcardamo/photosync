@@ -1,0 +1,24 @@
+[package]
+name = "photosync-core"
+description = "Syncthing selection, capacity and release-gate logic for photosync"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+chrono.workspace = true
+globset.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+url.workspace = true
+uuid.workspace = true
+walkdir.workspace = true
+
+[dev-dependencies]
+tempfile = "3.23.0"
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time"] }
