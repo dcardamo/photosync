@@ -138,8 +138,9 @@ whose certificate SHA-256 differs from the pinned value. Never generate a new
 release key once installed copies exist: Obtainium updates would be rejected.
 
 The release keystore, password and base64 copy live only in gitignored
-`.data/`. Add them to the GitHub `release` environment as `KEYSTORE_BASE64` and
-`KEYSTORE_PASSWORD`. The pinned certificate is
+`.data/`. Back up `.data/photosync.keystore` and its password: losing them means
+installed copies cannot be updated. Add them to the GitHub `release`
+environment as `KEYSTORE_BASE64` and `KEYSTORE_PASSWORD`. The pinned certificate is
 `4591CFDABD68DE29C741F745115238DF4035AFA16A7C99CDE53E12C64466291A`.
 
 Secret scanning runs in the pre-commit hook, in `scripts/release.sh`, and in

@@ -73,7 +73,8 @@ in {
       wantedBy = ["multi-user.target"];
       after = ["network.target"];
       serviceConfig = {
-        ExecStart = "${cfg.package}/bin/photosync-status --config ${configFile} --token-file ${cfg.tokenFile}";
+        ExecStart = "${cfg.package}/bin/photosync-status --config ${configFile} --token-file %d/photosync-token";
+        LoadCredential = ["photosync-token:${cfg.tokenFile}"];
         User = cfg.user;
         Group = cfg.group;
         NoNewPrivileges = true;
@@ -89,7 +90,7 @@ in {
         LockPersonality = true;
         MemoryDenyWriteExecute = true;
         SystemCallArchitectures = "native";
-        ReadOnlyPaths = [settings.root (toString cfg.tokenFile)];
+        ReadOnlyPaths = [settings.root];
       };
     };
 
