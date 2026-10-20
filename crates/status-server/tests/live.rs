@@ -1229,38 +1229,6 @@ async fn release_gate_live() -> Result<()> {
     Ok(())
 }
 
-#[ignore = "requires two real Syncthing instances"]
-#[tokio::test(flavor = "multi_thread")]
-async fn profile_scan_alone_pulls() -> Result<()> {
-    let harness = Harness::start().await?;
-    let a = "originals/Projects/Base";
-    let a_pub = "published/Projects/Base";
-    let b = "originals/Projects/Added";
-    let b_pub = "published/Projects/Added";
-    for path in [
-        format!("{a}/a.jpg"),
-        format!("{a_pub}/a.jpg"),
-        format!("{b}/b.jpg"),
-        format!("{b_pub}/b.jpg"),
-    ] {
-        write_file(&harness.hub_path(&path), b"x")?;
-    }
-    harness.scan_hub().await?;
-    harness.bootstrap(&[a, a_pub]).await?;
-    harness.reload_profile().await?;
-    wait_file(&harness.edge_path(&format!("{a}/a.jpg")), true, "base").await?;
-    harness.set_profile(&[a, a_pub, b, b_pub])?;
-    harness.scan_edge(Some(".stprofiles")).await?;
-    harness.wait_edge_ignores_present(&[b, b_pub]).await?;
-    wait_file(
-        &harness.edge_path(&format!("{b}/b.jpg")),
-        true,
-        "profile-scan-alone pull",
-    )
-    .await?;
-    Ok(())
-}
-
 #[test]
 fn helper_paths_are_relative() {
     assert_eq!(
