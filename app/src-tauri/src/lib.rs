@@ -651,7 +651,6 @@ async fn capacity(
     let cached = load_cache(&state);
     let mut stale = false;
     let mut error = None;
-    let mut active_bytes = 0u64;
     let mut sizes: std::collections::HashMap<String, u64> = cached
         .as_ref()
         .map(|c| {
@@ -661,21 +660,29 @@ async fn capacity(
                 .collect()
         })
         .unwrap_or_default();
-    if sizes.is_empty() {
-        if let Ok(client) = status_client(&settings, &app) {
+    match status_client(&settings, &app) {
+        Ok(client) => {
             for path in &profile.active {
                 if !path.starts_with(&format!("{}/", settings.layout.originals)) {
                     continue;
                 }
                 if let Ok((size, _)) = size_for(&client, path).await {
-                    sizes.insert(path.clone(), size);
+                    let mut total = size;
+                    if let Ok(project) = Project::from_originals_in(path, &settings.layout) {
+                        if let Ok((published, _)) = size_for(&client, &project.published).await {
+                            total = total.saturating_add(published);
+                        }
+                    }
+                    sizes.insert(path.clone(), total);
                 }
             }
-        } else {
+        }
+        Err(_) => {
             stale = true;
-            error = Some("hub sizes unavailable".into());
+            error = Some("hub sizes unavailable; using the last known values".into());
         }
     }
+    let mut active_bytes = 0u64;
     for path in &profile.active {
         if path.starts_with(&format!("{}/", settings.layout.originals)) {
             active_bytes = active_bytes.saturating_add(sizes.get(path).copied().unwrap_or(0));
